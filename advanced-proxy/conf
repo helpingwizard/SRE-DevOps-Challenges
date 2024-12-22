@@ -1,0 +1,49 @@
+server {
+    listen 80;
+    server_name grafana.local jenkins.local;
+
+    # Redirect HTTP to HTTPS
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    server_name jenkins.local;
+
+    ssl_certificate /etc/nginx/ssl/nginx.crt;
+    ssl_certificate_key /etc/nginx/ssl/nginx.key;
+
+    # Jenkins reverse proxy
+    location / {
+        auth_basic "Restricted Access";
+        auth_basic_user_file /etc/nginx/.htpasswd; # Basic Auth file for Jenkins
+        proxy_pass http://172.31.3.44:8080; # Adjust if Jenkins runs on a different port
+        proxy_set_header Host $host;
+        limit_req zone=req_limit_per_ip burst=1 nodelay;
+        include  /etc/nginx/mime.types;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_redirect off;
+    }
+}
+
+
+server {
+    listen 443 ssl;
+    server_name grafana.local;
+
+    ssl_certificate /etc/nginx/ssl/nginx.crt;
+    ssl_certificate_key /etc/nginx/ssl/nginx.key;
+
+    # Grafana reverse proxy
+    location / {
+        proxy_pass http://172.31.3.44:3000; # Adjust if Grafana runs on a different port
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        limit_req zone=req_limit_per_ip burst=2 nodelay;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_redirect off;
+    }
+}
