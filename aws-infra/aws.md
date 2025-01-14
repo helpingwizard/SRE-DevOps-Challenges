@@ -1,1 +1,0 @@
-Design, Deploy, and Diagnose: A Comprehensive Cloud Project with Flask and MySQL
